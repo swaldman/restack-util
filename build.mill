@@ -1,0 +1,72 @@
+//| mill-version: 1.0.6
+//| mill-jvm-version: 17
+//+---------------------------------------------------------------
+
+package build
+
+import mill.*, scalalib.*, scalajslib.*, publish.*
+
+trait RestackUtilScalaModule extends ScalaModule,SonatypeCentralPublishModule:
+  val projectVersion  = "0.0.1-SNAPSHOT"
+  val projectBaseName = "restack-util"
+
+  val JsoniterVersion = "2.36.6"
+  val TapirVersion    = "1.11.35"
+  val sttpVersion     = "4.0.12"
+
+  override def scalaVersion   = "3.7.4"
+  override def scalacOptions  = Task { Seq("-deprecation") }
+  override def publishVersion = projectVersion
+
+trait RestackUtilScalaJSModule extends RestackUtilScalaModule,ScalaJSModule:
+  override def scalaJSVersion = "1.20.1"
+
+object `package` extends ScalaModule with RestackUtilScalaModule:
+
+  def makePomSettings( projectName : String, description : String ) =
+    PomSettings(
+      description = description,
+      organization = "com.mchange",
+      url = s"https://www.mchange.com/projects/${projectName}",
+      licenses = Seq(License.`AGPL-3.0-only`),
+      versionControl = VersionControl.github("swaldman", projectName),
+      developers = Seq(
+        Developer("swaldman", "Steve Waldman", "https://github.com/swaldman")
+      )
+    )
+
+  val projectName = projectBaseName + "-server"
+
+  override def artifactName = projectName
+  override def pomSettings  = Task { makePomSettings( projectName, "Server-side utilities shared by protopost, seismic, etc.") }
+
+  override def moduleDeps = Seq(shared.jvm)
+
+  override def mvnDeps = Task:
+    Seq(
+      mvn"com.mchange::conveniences:0.0.6",
+      mvn"com.mchange::cryptoutil:0.0.3-SNAPSHOT",
+      mvn"org.bouncycastle:bcprov-jdk18on:1.81",
+    )
+
+  // modified from https://mill-build.org/mill/scalalib/web-examples.html
+  object shared extends Module:
+    trait SharedModule extends RestackUtilScalaModule, PlatformScalaModule:
+      val projectName = projectBaseName + "-common"
+      override def artifactName = projectName
+      override def pomSettings  = Task { makePomSettings( projectName, "Common (server, client) utilities shared by protopost, seismic, etc.") }
+      def compileMvnDeps = Seq(
+        mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros::${JsoniterVersion}"
+      )
+      def mvnDeps = Seq(
+        mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core::${JsoniterVersion}",
+        mvn"com.softwaremill.sttp.tapir::tapir-core:$TapirVersion",
+        mvn"com.softwaremill.sttp.tapir::tapir-files:$TapirVersion",
+        mvn"com.softwaremill.sttp.tapir::tapir-zio-http-server:$TapirVersion",
+        mvn"com.softwaremill.sttp.tapir::tapir-jsoniter-scala:$TapirVersion",
+        mvn"com.softwaremill.sttp.client4::core::${sttpVersion}",
+        mvn"com.softwaremill.sttp.client4::jsoniter::${sttpVersion}",
+        mvn"com.softwaremill.sttp.client4::zio:${sttpVersion}",
+      )
+    object jvm extends SharedModule
+    object js extends SharedModule, RestackUtilScalaJSModule
