@@ -45,7 +45,7 @@ object `package` extends ScalaModule with RestackUtilScalaModule:
   override def mvnDeps = Task:
     Seq(
       mvn"com.mchange::conveniences:0.0.6",
-      mvn"com.mchange::cryptoutil:0.0.3-SNAPSHOT",
+      mvn"com.mchange::cryptoutil:0.0.3",
       mvn"org.bouncycastle:bcprov-jdk18on:1.81",
       mvn"com.auth0:jwks-rsa:0.23.0",
     )
